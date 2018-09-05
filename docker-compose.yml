@@ -1,0 +1,62 @@
+version: '3'
+networks:
+    opensips:
+        driver: bridge
+services:
+  bancodedados:
+    image: "mariadb"
+    restart: unless-stopped
+    networks:
+      - opensips
+    container_name: bancodedados
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-opensips}
+  opensips:
+    build:
+      context: opensips
+    restart: unless-stopped
+    container_name: opensips
+    environment:
+      IP_SERVIDOR_DOCKER: ${IP_SERVIDOR_DOCKER}
+    ports:
+      - "5060:5060/udp"
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    networks:
+      - opensips
+    depends_on:
+      - bancodedados
+  opensips-cp:
+    image: "opensips-cp"
+    restart: unless-stopped
+    networks:
+      - opensips
+    build:
+      context: opensips-cp
+    container_name: opensips-cp
+    ports:
+      - "80:80/tcp"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-opensips}
+    depends_on:
+      - opensips
+  mediaserver:
+    image: "mediaserver"
+    build:
+      context: mediaserver
+    container_name: mediaserver
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-opensips}
+    ports:
+      - "5600:5600/udp"
+      - "5601:5601/udp"
+      - "10000-10100:10000-10100/udp"
+    restart: unless-stopped
+    networks:
+      - opensips
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
